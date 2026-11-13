@@ -6,16 +6,18 @@ A mobile-friendly browser app for this monthly CSV format:
 
 Search an exact household number to view its name, consumer number, arrears, current bill, and total amount. If a number appears more than once, all exact matches are shown.
 
-## Important: hosting and data sharing
+## Data storage and sharing
 
-This repository contains the portal code only. It must not contain the original CSV, `data.enc`, or the shared passphrase.
+The repository and GitHub Pages site contain the portal code only. They must not contain the original CSV, `data.enc`, or the shared passphrase.
 
-GitHub Pages can host the static app, but it does not provide a secure place for this sensitive billing database. The app reads and encrypts the selected CSV in the browser; it does not upload records to a server or synchronize them between team members. A browser's uploaded file and search results are available only in that browser session.
+The app encrypts the selected CSV in the browser with AES-256-GCM and saves only the encrypted copy in that browser's IndexedDB storage. On later visits from the same browser on the same device, enter the passphrase to unlock the saved copy; re-uploading the CSV is not necessary. The passphrase is not stored. Locking the portal clears decrypted records from the current page, and the login screen can forget the saved encrypted copy.
 
-To let multiple field staff look up the same current records, deploy the app and data on an organization-approved server with appropriate access controls. Do not publish consumer records—even an encrypted copy—or the passphrase to a public GitHub repository. The shared-passphrase browser encryption is not a substitute for server-side authentication and cannot protect data from a compromised website serving modified code.
+Browser storage is device- and browser-specific. Each team device must be initialized once with the CSV or by selecting the encrypted `data.enc` backup, then unlocked with the passphrase. Browser storage clearing, private browsing, or device loss may remove its saved copy. Updating one device does not synchronize other devices. The app downloads `data.enc` as a backup when data is prepared or updated.
+
+GitHub Pages does not securely host or synchronize the billing database. To provide centrally synchronized records, use an organization-approved server with appropriate access controls. Do not publish consumer records—even an encrypted copy—or the passphrase to a public GitHub repository. The shared-passphrase browser encryption is not a substitute for server-side authentication and cannot protect data from a compromised website serving modified code.
 
 ## Local use
 
-Open the app from a secure HTTPS origin or localhost in a modern browser. Choose the CSV and set a new strong passphrase (at least 20 characters) to encrypt it locally and download `data.enc`. The current browser can search its in-memory records for that session. The encrypted download can only be opened by selecting it in a browser with the passphrase; it does not make records available to other devices by itself.
+Open the app from a secure HTTPS origin or localhost in a modern browser. Choose the CSV and set a new strong passphrase (at least 20 characters) to encrypt and save it in that browser, and download `data.enc` as a backup. On the next visit, enter the passphrase to unlock the locally saved records. To initialize another device, select the CSV once or import the encrypted backup and enter the same passphrase.
 
 Keep the original CSV and `data.enc` out of source control. `.gitignore` excludes CSV, Excel, and `data.enc` files by default.

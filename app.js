@@ -10,17 +10,23 @@ const REQUIRED_HEADERS = [
 ];
 const PBKDF2_ITERATIONS = 600000;
 const ENCRYPTED_FILE_NAME = "data.enc";
+const DATABASE_NAME = "household-bill-lookup";
+const DATABASE_VERSION = 1;
+const DATA_STORE_NAME = "encrypted-data";
+const DATA_STORE_KEY = "latest";
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 const elements = {
   notice: document.querySelector("#notice"),
   loginPanel: document.querySelector("#login-panel"),
+  loginDescription: document.querySelector("#login-description"),
   setupPanel: document.querySelector("#setup-panel"),
   portalPanel: document.querySelector("#portal-panel"),
   loginForm: document.querySelector("#login-form"),
   loginPassphrase: document.querySelector("#login-passphrase"),
   encryptedFile: document.querySelector("#encrypted-file"),
+  forgetData: document.querySelector("#forget-data"),
   setupForm: document.querySelector("#setup-form"),
   setupCsv: document.querySelector("#setup-csv"),
   setupPassphrase: document.querySelector("#setup-passphrase"),
@@ -59,6 +65,65 @@ function showPanel(panel) {
   elements.setupPanel.classList.toggle("hidden", panel !== "setup");
   elements.portalPanel.classList.toggle("hidden", panel !== "portal");
   elements.lockButton.classList.toggle("hidden", panel !== "portal");
+}
+
+function openDataDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
+    request.addEventListener("upgradeneeded", () => {
+      const database = request.result;
+      if (!database.objectStoreNames.contains(DATA_STORE_NAME)) {
+        database.createObjectStore(DATA_STORE_NAME);
+      }
+    });
+    request.addEventListener("success", () => resolve(request.result), { once: true });
+    request.addEventListener("error", () => reject(new Error("Could not open encrypted storage in this browser.")), { once: true });
+    request.addEventListener("blocked", () => reject(new Error("Encrypted storage is blocked by another open portal tab.")), { once: true });
+  });
+}
+
+async function saveEncryptedBundle(bundle) {
+  const database = await openDataDatabase();
+  try {
+    await new Promise((resolve, reject) => {
+      const transaction = database.transaction(DATA_STORE_NAME, "readwrite");
+      transaction.objectStore(DATA_STORE_NAME).put(bundle, DATA_STORE_KEY);
+      transaction.addEventListener("complete", resolve, { once: true });
+      transaction.addEventListener("error", () => reject(new Error("Could not save the encrypted data on this device.")), { once: true });
+      transaction.addEventListener("abort", () => reject(new Error("Saving encrypted data on this device was interrupted.")), { once: true });
+    });
+  } finally {
+    database.close();
+  }
+}
+
+async function readSavedBundle() {
+  const database = await openDataDatabase();
+  try {
+    return await new Promise((resolve, reject) => {
+      const transaction = database.transaction(DATA_STORE_NAME, "readonly");
+      const request = transaction.objectStore(DATA_STORE_NAME).get(DATA_STORE_KEY);
+      request.addEventListener("success", () => resolve(request.result ?? null), { once: true });
+      request.addEventListener("error", () => reject(new Error("Could not read the encrypted data saved in this browser.")), { once: true });
+    });
+  } finally {
+    database.close();
+  }
+}
+
+async function forgetSavedBundle() {
+  const database = await openDataDatabase();
+  try {
+    await new Promise((resolve, reject) => {
+      const transaction = database.transaction(DATA_STORE_NAME, "readwrite");
+      transaction.objectStore(DATA_STORE_NAME).delete(DATA_STORE_KEY);
+      transaction.addEventListener("complete", resolve, { once: true });
+      transaction.addEventListener("error", () => reject(new Error("Could not remove the saved encrypted data.")), { once: true });
+      transaction.addEventListener("abort", () => reject(new Error("Removing the saved data was interrupted.")), { once: true });
+    });
+  } finally {
+    database.close();
+  }
 }
 
 function parseCsv(text) {
@@ -361,6 +426,7 @@ async function unlockWithFile(file, passphrase) {
   if (records.length === 0) {
     throw new Error("The encrypted file contains no bill records.");
   }
+  await saveEncryptedBundle(bundle);
   state.records = records;
   state.passphrase = passphrase;
   showPanel("portal");
@@ -369,23 +435,40 @@ async function unlockWithFile(file, passphrase) {
 }
 
 async function loadHostedBundle() {
-  if (location.protocol === "file:") {
-    showPanel("setup");
-    return;
+  if (location.protocol !== "file:") {
+    try {
+      const response = await fetch(new URL(ENCRYPTED_FILE_NAME, location.href), { cache: "no-store" });
+      if (response.ok) {
+        const bundle = await response.json();
+        await saveEncryptedBundle(bundle);
+        showLoginForStoredData(false);
+        return;
+      }
+    } catch {
+      showNotice("Could not check for a newer online data file. Trying this device's saved copy.", true);
+    }
   }
 
   try {
-    const response = await fetch(new URL(ENCRYPTED_FILE_NAME, location.href), { cache: "no-store" });
-    if (!response.ok) {
-      showPanel("setup");
+    const bundle = await readSavedBundle();
+    if (bundle) {
+      showLoginForStoredData(true);
       return;
     }
-    await response.json();
-    showPanel("login");
-  } catch {
+    clearNotice();
     showPanel("setup");
-    showNotice("Could not load data.enc. If this portal is already set up, check the website and encrypted data file.", true);
+  } catch (error) {
+    showPanel("setup");
+    showNotice(error.message, true);
   }
+}
+
+function showLoginForStoredData(isLocal) {
+  showPanel("login");
+  elements.loginDescription.textContent = isLocal
+    ? "Encrypted bill data is saved in this browser on this device. Enter the passphrase to unlock it; you do not need to upload the CSV again here."
+    : "Enter your team's shared passphrase to unlock the latest online bill file. It will also be saved encrypted on this device.";
+  elements.forgetData.classList.toggle("hidden", !isLocal);
 }
 
 elements.loginForm.addEventListener("submit", async (event) => {
@@ -399,14 +482,26 @@ elements.loginForm.addEventListener("submit", async (event) => {
     if (elements.encryptedFile.files[0]) {
       await unlockWithFile(elements.encryptedFile.files[0], passphrase);
     } else {
-      const response = await fetch(new URL(ENCRYPTED_FILE_NAME, location.href), { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error("The encrypted bill file could not be loaded. Choose data.enc or contact the portal administrator.");
+      let bundle;
+      let response = null;
+      try {
+        response = await fetch(new URL(ENCRYPTED_FILE_NAME, location.href), { cache: "no-store" });
+      } catch {
+        bundle = await readSavedBundle();
       }
-      const records = await decryptBundle(await response.json(), passphrase);
+      if (response?.ok) {
+        bundle = await response.json();
+      } else if (!bundle) {
+        bundle = await readSavedBundle();
+      }
+      if (!bundle) {
+        throw new Error("No saved bill data found. Select the CSV or encrypted data file first.");
+      }
+      const records = await decryptBundle(bundle, passphrase);
       if (records.length === 0) {
         throw new Error("The encrypted file contains no bill records.");
       }
+      await saveEncryptedBundle(bundle);
       state.records = records;
       state.passphrase = passphrase;
       showPanel("portal");
@@ -446,6 +541,7 @@ elements.setupForm.addEventListener("submit", async (event) => {
     }
     const { records, skipped } = recordsFromCsv(await file.text());
     const bundle = await encryptRecords(records, passphrase);
+    await saveEncryptedBundle(bundle);
     downloadEncryptedBundle(bundle);
     state.records = records;
     state.passphrase = passphrase;
@@ -453,7 +549,7 @@ elements.setupForm.addEventListener("submit", async (event) => {
     elements.setupPassphraseConfirm.value = "";
     showPanel("portal");
     updateRecordCount();
-    showNotice(`Encrypted ${records.length.toLocaleString("en")} records and downloaded data.enc. Publish that file beside the portal to make it available to the team.${skipped ? ` Skipped ${skipped.toLocaleString("en")} incomplete row(s).` : ""}`);
+    showNotice(`Encrypted ${records.length.toLocaleString("en")} records and saved them on this device. You will not need to upload the CSV again here. Keep the downloaded data.enc as a backup.${skipped ? ` Skipped ${skipped.toLocaleString("en")} incomplete row(s).` : ""}`);
   } catch (error) {
     showNotice(error.message, true);
   } finally {
@@ -493,6 +589,7 @@ elements.updateForm.addEventListener("submit", async (event) => {
     }
     const { records, skipped } = recordsFromCsv(await file.text());
     const bundle = await encryptRecords(records, state.passphrase);
+    await saveEncryptedBundle(bundle);
     downloadEncryptedBundle(bundle);
     state.records = records;
     updateRecordCount();
@@ -500,7 +597,7 @@ elements.updateForm.addEventListener("submit", async (event) => {
     elements.householdInput.value = "";
     elements.updateForm.reset();
     elements.updatePanel.classList.add("hidden");
-    showNotice(`Encrypted ${records.length.toLocaleString("en")} records and downloaded a replacement data.enc. Replace the old file on your website to publish this month's data.${skipped ? ` Skipped ${skipped.toLocaleString("en")} incomplete row(s).` : ""}`);
+    showNotice(`Encrypted ${records.length.toLocaleString("en")} records and updated the saved copy on this device. Upload the new CSV once on each other device, or import the encrypted backup.${skipped ? ` Skipped ${skipped.toLocaleString("en")} incomplete row(s).` : ""}`);
   } catch (error) {
     showNotice(error.message, true);
   } finally {
@@ -511,6 +608,17 @@ elements.updateForm.addEventListener("submit", async (event) => {
 elements.encryptedFile.addEventListener("change", () => {
   if (elements.encryptedFile.files.length > 0) {
     elements.loginPassphrase.focus();
+  }
+});
+
+elements.forgetData.addEventListener("click", async () => {
+  try {
+    await forgetSavedBundle();
+    elements.forgetData.classList.add("hidden");
+    showPanel("setup");
+    showNotice("Saved encrypted data was removed from this device. You will need the CSV or a backup data.enc to use the portal here again.");
+  } catch (error) {
+    showNotice(error.message, true);
   }
 });
 

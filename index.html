@@ -26,7 +26,7 @@
       <section id="login-panel" class="panel hidden" aria-labelledby="login-title">
         <p class="eyebrow">TEAM ACCESS</p>
         <h2 id="login-title">Unlock bill records</h2>
-        <p class="muted">Enter your team's shared passphrase to decrypt the latest bill file on this device.</p>
+        <p id="login-description" class="muted">Enter your team's shared passphrase to decrypt the latest bill file on this device.</p>
         <form id="login-form" class="form-stack">
           <label for="login-passphrase">Shared passphrase</label>
           <input id="login-passphrase" type="password" autocomplete="current-password" required>
@@ -37,12 +37,13 @@
           <label class="file-label" for="encrypted-file">Select data.enc</label>
           <input id="encrypted-file" type="file" accept=".enc,.json,application/json">
         </details>
+        <button id="forget-data" class="button button-quiet forget-button hidden" type="button">Forget saved data on this device</button>
       </section>
 
       <section id="setup-panel" class="panel hidden" aria-labelledby="setup-title">
         <p class="eyebrow">FIRST-TIME SETUP</p>
         <h2 id="setup-title">Prepare this month's bill file</h2>
-        <p class="muted">Select the monthly CSV and create a strong shared passphrase. The records are encrypted in your browser before you download the data file.</p>
+        <p class="muted">Select the monthly CSV and create a strong shared passphrase. The records are encrypted in your browser and saved on this device, so you only need to upload the CSV once per device.</p>
         <form id="setup-form" class="form-stack">
           <label for="setup-csv">Monthly bill CSV</label>
           <input id="setup-csv" type="file" accept=".csv,text/csv" required>
@@ -96,7 +97,7 @@
 
       <footer>
         <span>Private-by-encryption static portal</span>
-        <span>No consumer data is sent to an application server.</span>
+        <span>Encrypted data stays saved in this browser on this device.</span>
       </footer>
     </main>
   </body>
