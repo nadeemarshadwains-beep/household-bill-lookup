@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#123c36">
+    <meta name="description" content="Mobile-friendly household bill lookup portal">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
+    <title>Household Bill Lookup</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div class="brand-mark" aria-hidden="true">B</div>
+        <div>
+          <p class="eyebrow">FIELD TEAM PORTAL</p>
+          <h1>Household Bill Lookup</h1>
+        </div>
+        <button id="lock-button" class="button button-quiet hidden" type="button">Lock</button>
+      </header>
+
+      <section id="notice" class="notice hidden" role="status" aria-live="polite"></section>
+
+      <section id="login-panel" class="panel hidden" aria-labelledby="login-title">
+        <p class="eyebrow">TEAM ACCESS</p>
+        <h2 id="login-title">Unlock bill records</h2>
+        <p class="muted">Enter your team's shared passphrase to decrypt the latest bill file on this device.</p>
+        <form id="login-form" class="form-stack">
+          <label for="login-passphrase">Shared passphrase</label>
+          <input id="login-passphrase" type="password" autocomplete="current-password" required>
+          <button class="button button-primary" type="submit">Unlock portal</button>
+        </form>
+        <details class="secondary-action">
+          <summary>Choose an encrypted data file</summary>
+          <label class="file-label" for="encrypted-file">Select data.enc</label>
+          <input id="encrypted-file" type="file" accept=".enc,.json,application/json">
+        </details>
+      </section>
+
+      <section id="setup-panel" class="panel hidden" aria-labelledby="setup-title">
+        <p class="eyebrow">FIRST-TIME SETUP</p>
+        <h2 id="setup-title">Prepare this month's bill file</h2>
+        <p class="muted">Select the monthly CSV and create a strong shared passphrase. The records are encrypted in your browser before you download the data file.</p>
+        <form id="setup-form" class="form-stack">
+          <label for="setup-csv">Monthly bill CSV</label>
+          <input id="setup-csv" type="file" accept=".csv,text/csv" required>
+          <label for="setup-passphrase">Create shared passphrase</label>
+          <input id="setup-passphrase" type="password" autocomplete="new-password" minlength="16" required>
+          <p class="field-help">Use at least 16 characters; a longer, unique passphrase is safer. Do not reuse the short value shared in chat.</p>
+          <label for="setup-passphrase-confirm">Confirm passphrase</label>
+          <input id="setup-passphrase-confirm" type="password" autocomplete="new-password" minlength="16" required>
+          <button class="button button-primary" type="submit">Encrypt and prepare portal</button>
+        </form>
+      </section>
+
+      <section id="portal-panel" class="hidden" aria-labelledby="search-title">
+        <div class="welcome-row">
+          <div>
+            <p class="eyebrow">CONSUMER RECORDS</p>
+            <h2 id="search-title">Find a household</h2>
+            <p id="record-count" class="muted"></p>
+          </div>
+          <button id="update-button" class="button button-secondary" type="button">Update monthly file</button>
+        </div>
+
+        <form id="search-form" class="search-panel">
+          <label for="household-input">Household number</label>
+          <div class="search-controls">
+            <input id="household-input" type="search" inputmode="text" autocomplete="off" placeholder="Enter household number" required>
+            <button class="button button-primary" type="submit">Search</button>
+          </div>
+          <p class="field-help">Search uses the exact household number from the bill file.</p>
+        </form>
+
+        <div id="results" class="results" aria-live="polite"></div>
+        <p class="privacy-note">Records are decrypted only in this browser session. Lock the portal when you finish on a shared device.</p>
+
+        <section id="update-panel" class="panel update-panel hidden" aria-labelledby="update-title">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">MONTHLY REFRESH</p>
+              <h3 id="update-title">Replace bill file</h3>
+            </div>
+            <button id="cancel-update" class="button button-quiet" type="button">Cancel</button>
+          </div>
+          <p class="muted">Choose the new month's CSV in the same format. This creates a fresh encrypted <code>data.enc</code>; upload it to your site to publish the update.</p>
+          <form id="update-form" class="form-stack">
+            <label for="update-csv">New monthly bill CSV</label>
+            <input id="update-csv" type="file" accept=".csv,text/csv" required>
+            <button class="button button-primary" type="submit">Encrypt and download update</button>
+          </form>
+        </section>
+      </section>
+
+      <footer>
+        <span>Private-by-encryption static portal</span>
+        <span>No consumer data is sent to an application server.</span>
+      </footer>
+    </main>
+  </body>
+</html>
