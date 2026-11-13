@@ -468,7 +468,7 @@ function showLoginForStoredData(isLocal) {
   elements.loginDescription.textContent = isLocal
     ? "Encrypted bill data is saved in this browser on this device. Enter the passphrase to unlock it; you do not need to upload the CSV again here."
     : "Enter your team's shared passphrase to unlock the latest online bill file. It will also be saved encrypted on this device.";
-  elements.forgetData.classList.toggle("hidden", !isLocal);
+  elements.forgetData.classList.remove("hidden");
 }
 
 elements.loginForm.addEventListener("submit", async (event) => {
@@ -524,8 +524,8 @@ elements.setupForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   clearNotice();
   const passphrase = elements.setupPassphrase.value;
-  if (passphrase.length < 16) {
-    showNotice("Create a passphrase with at least 16 characters.", true);
+  if (passphrase.length < 20) {
+    showNotice("Create a passphrase with at least 20 characters.", true);
     return;
   }
   if (passphrase !== elements.setupPassphraseConfirm.value) {

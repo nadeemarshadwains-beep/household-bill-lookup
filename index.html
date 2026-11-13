@@ -7,8 +7,8 @@
     <meta name="description" content="Mobile-friendly household bill lookup portal">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
     <title>Household Bill Lookup</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="app.js" defer></script>
+    <link rel="stylesheet" href="styles.css?v=2">
+    <script src="app.js?v=2" defer></script>
   </head>
   <body>
     <main class="shell">
@@ -48,10 +48,10 @@
           <label for="setup-csv">Monthly bill CSV</label>
           <input id="setup-csv" type="file" accept=".csv,text/csv" required>
           <label for="setup-passphrase">Create shared passphrase</label>
-          <input id="setup-passphrase" type="password" autocomplete="new-password" minlength="16" required>
-          <p class="field-help">Use at least 16 characters; a longer, unique passphrase is safer. Do not reuse the short value shared in chat.</p>
+          <input id="setup-passphrase" type="password" autocomplete="new-password" minlength="20" required>
+          <p class="field-help">Use at least 20 characters; a longer, unique passphrase is safer. Do not reuse the short value shared in chat.</p>
           <label for="setup-passphrase-confirm">Confirm passphrase</label>
-          <input id="setup-passphrase-confirm" type="password" autocomplete="new-password" minlength="16" required>
+          <input id="setup-passphrase-confirm" type="password" autocomplete="new-password" minlength="20" required>
           <button class="button button-primary" type="submit">Encrypt and prepare portal</button>
         </form>
       </section>
